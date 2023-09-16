@@ -1,15 +1,33 @@
 import { Button } from "./components/ui/button";
-import { Github, FileVideo, Upload, Wand2 } from 'lucide-react'
+import { Github, Wand2 } from 'lucide-react'
 import { Separator } from "./components/ui/separator";
 import { Textarea } from "./components/ui/textarea";
 import { Label } from "./components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 import { Slider } from "./components/ui/slider";
+import { VideoInputForm } from "./components/video-input-form";
+import { PromptSelect } from "./components/prompt-select";
+import { useState } from "react";
+import { useCompletion } from 'ai/react'
 
 export function App() {
+  const [temperature, setTemperature] = useState(0.5)
+  const [videoId, setVideoId] = useState<string | null>()
+
+  const { input, setInput, handleInputChange, handleSubmit, completion, isLoading } = useCompletion({
+    api: 'http://localhost:3333/ai/complete',
+    body: {
+      videoId,
+      temperature,
+    },
+    headers: {
+      'Content-type': 'application/json',
+    }
+  })
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="px-6 py-3 flex items-center justify-between border-b">
+    <div className="flex flex-col min-h-screen">
+      <div className="flex items-center justify-between px-6 py-3 border-b">
         <h1 className="text-xl font-bold">upload.ai</h1>
 
         <div className="flex items-center gap-3">
@@ -26,16 +44,20 @@ export function App() {
         </div>
       </div>
 
-      <main className="flex-1 p-6 flex gap-6">
+      <main className="flex flex-1 gap-6 p-6">
         <div className="flex flex-col flex-1 gap-4">
-          <div className="grid grid-rows-2 gap-4 flex-1">
+          <div className="grid flex-1 grid-rows-2 gap-4">
             <Textarea
               placeholder="Inclua o prompt para a IA..." 
-              className="resize-none p-4 leading-relaxed" 
+              className="p-4 leading-relaxed resize-none" 
+              value={input}
+              onChange={handleInputChange}
             />
             <Textarea 
               placeholder="Resultado gerado pela IA" 
-              className="resize-none p-4 leading-relaxed"
+              className="p-4 leading-relaxed resize-none"
+              value={completion}
+              readOnly
             />
           </div>
           <p className="text-sm text-muted-foreground">
@@ -43,46 +65,18 @@ export function App() {
           </p>
         </div>
 
-        <aside className="w-80 space-y-6">
-          <form className="space-y-6">
-            <label htmlFor="video" className="flex border rounded-md aspect-video cursor-pointer border-dashed text-sm flex-col gap-2 items-center justify-center text-muted-foreground hover:bg-primary/5">
-              <FileVideo className="h-4 w-4" />
-              Selecione um vídeo
-            </label>
-            <input type="file" id="video" accept="video/mp4"  className="sr-only" />
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label htmlFor="transcription_prompt">Prompt de transcrição</Label>
-              <Textarea id="transcription_prompt" className="h-20 resize-none leading-relaxed" placeholder="Inclua palavras-chave mencionadas no vídeo separadas por vírgula (,)" />
-            </div>
-
-            <Button className="w-full" type="submit">
-              Carregar vídeo
-              <Upload className="w-4 h-4 ml-2" />
-            </Button>
-          </form>
+        <aside className="space-y-6 w-80">
+          <VideoInputForm onVideoUploaded={setVideoId}/>
           
           <Separator />
 
           <div className="space-y-2">
             <Label htmlFor="">Prompt</Label>
-            <Select defaultValue="title">
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um prompt..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="title">Título do YouTube</SelectItem>
-                <SelectItem value="description">Descrição do YouTube</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <span className="block text-xs text-muted-foreground italic">Você poderá customizar essa opção em breve</span>
+            <PromptSelect onPromptSelected={setInput} />
+            <span className="block text-xs italic text-muted-foreground">Você poderá customizar essa opção em breve</span>
           </div>
 
-
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="">Model</Label>
               <Select disabled defaultValue="gpt3.5">
@@ -94,24 +88,26 @@ export function App() {
                 </SelectContent>
               </Select>
 
-              <span className="block text-xs text-muted-foreground italic">Você poderá customizar essa opção em breve</span>
+              <span className="block text-xs italic text-muted-foreground">Você poderá customizar essa opção em breve</span>
             </div>
 
             <Separator />
 
             <div className="space-y-4">
-              <Label>Model</Label>
+              <Label>Temperature</Label>
               <Slider
                 min={0}
                 max={1}
                 step={0.1}
+                value={[temperature]}
+                onValueChange={value => setTemperature(value[0])}
               />
-              <span className="leading-relaxed block text-xs text-muted-foreground italic">Valores mais altos tendem a deixar o resultado mais criativo e com possíveis erros.</span>
+              <span className="block text-xs italic leading-relaxed text-muted-foreground">Valores mais altos tendem a deixar o resultado mais criativo e com possíveis erros.</span>
             </div>
 
             <Separator />
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={isLoading}>
               Executar
               <Wand2 className="w-4 h-4 ml-2" />
             </Button>
